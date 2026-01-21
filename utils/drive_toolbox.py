@@ -135,14 +135,14 @@ def list_file_ids_for_drive_folder(drive, folder_id:str):
         file_id_dict[file['title']] = file['id']
     return file_id_dict
 
-def read_csv_from_drive(drive,file_id):
+def read_csv_from_drive(drive,file_id,**read_csv_kwargs):
     """
     """
     file = drive.CreateFile({'id': file_id})
     csv_bytes = file.GetContentString()  # returns CSV as a text string
 
     # --- Load into pandas ---
-    df = pd.read_csv(io.StringIO(csv_bytes))
+    df = pd.read_csv(io.StringIO(csv_bytes),**read_csv_kwargs)
     return df
 
 def write_csv_to_drive(drive,file_id, df):
