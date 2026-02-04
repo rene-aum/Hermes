@@ -4,7 +4,7 @@ import pytz
 from gspread_dataframe import set_with_dataframe,get_as_dataframe
 import io
 import time
-
+from googleapiclient.discovery import build
 
 
 def from_drive_to_local(drive, id_file, file_name):
@@ -178,3 +178,12 @@ def create_csv_file_in_drive_folder(drive,folder_id,df,filename):
     file.Upload()
     print("Uploaded file ID:", file["id"])
     return file["id"]
+
+def list_permissions(creds,file_id):
+    drive_service = build("drive", "v3", credentials=creds)
+    permissions = (drive_service.permissions().list(
+                    fileId=file_id,
+                    fields="permissions(id,emailAddress,role,type,domain)"
+                            ).execute())
+    resdf = pd.DataFrame(permissions['permissions'])
+    return resdf
