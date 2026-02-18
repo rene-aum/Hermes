@@ -5,6 +5,7 @@ from gspread_dataframe import set_with_dataframe,get_as_dataframe
 import io
 import time
 from googleapiclient.discovery import build
+import re
 
 
 def from_drive_to_local(drive, id_file, file_name):
@@ -187,3 +188,186 @@ def list_permissions(creds,file_id):
                             ).execute())
     resdf = pd.DataFrame(permissions['permissions'])
     return resdf
+
+def _a1_to_rowcol(a1: str):
+    """
+    Minimal A1 parser for a cell like 'B2' -> (row=2, col=2).
+    """
+    m = re.fullmatch(r"\s*([A-Za-z]+)(\d+)\s*", a1)
+    if not m:
+        raise ValueError(f"Invalid A1 cell reference: {a1!r}")
+    col_letters, row_str = m.group(1).upper(), m.group(2)
+
+    col = 0
+    for ch in col_letters:
+        col = col * 26 + (ord(ch) - ord("A") + 1)
+
+    row = int(row_str)
+    return row, col
+
+
+def find_last_filled_row_in_sheet(
+        gc,
+        spreadsheet_id: str,
+        worksheet_name: str = None,
+        scan_col: int = 1,
+        include_header: bool = True,
+        ):
+    """
+    Find the last row index (1-based) that has *any* non-empty value in a given column.
+
+    Parameters
+    ----------
+    gc : gspread.Client
+        Authenticated gspread client.
+    spreadsheet_id : str
+        ID of the Google Sheet.
+    worksheet_name : str, optional
+        Worksheet name; if None uses sheet1.
+    scan_col : int, default 1
+        Column index (1-based) to scan for last non-empty row.
+        Usually 1 (col A) if that column is always populated.
+    include_header : bool, default True
+        If False, treats row 1 as header and returns at least 1 even if only header exists.
+
+    Returns
+    -------
+    int
+        Last filled row (>=1). If sheet is empty and include_header=True -> 0,
+        if include_header=False -> 1 (header row).
+    """
+    spreadsheet = gc.open_by_key(spreadsheet_id)
+    worksheet = spreadsheet.sheet1 if worksheet_name is None else spreadsheet.worksheet(worksheet_name)
+
+    # Fetch the full column. This is typically efficient enough for most sheets.
+    # If you have extremely large sheets, you can optimize with batch ranges later.
+    col_values = worksheet.col_values(scan_col)
+
+    # Normalize: treat whitespace-only strings as empty
+    def _is_nonempty(x):
+        if x is None:
+            return False
+        if isinstance(x, str) and x.strip() == "":
+            return False
+        return True
+
+    last = 0
+    for i, v in enumerate(col_values, start=1):
+        if _is_nonempty(v):
+            last = i
+
+    if last == 0:
+        return 0 if include_header else 1
+    return last
+
+
+def append_dataframe_to_google_sheet_from_range(
+        gc,
+        spreadsheet_id: str,
+        worksheet_name: str,
+        df_to_append: pd.DataFrame,
+        start_cell: str = "A1",
+        include_header: bool = False,
+        scan_col: int = 1,
+        retries: int = 3,
+        initial_delay: float = 2.0,
+        backoff_factor: float = 2.0,
+        ):
+    """
+    Append a DataFrame to an existing worksheet starting at a specific column (from start_cell),
+    but automatically chooses the row based on the last filled row (in scan_col).
+
+    Behavior:
+      - Parses `start_cell` (e.g., 'C2') to get the starting column.
+      - Finds last filled row using `find_last_filled_row_in_sheet(...)`.
+      - Writes df starting at:
+            row = max(start_row_from_start_cell, last_filled_row + 1)
+            col = start_col_from_start_cell
+
+    Parameters
+    ----------
+    gc : gspread.Client
+        Authenticated gspread client.
+    spreadsheet_id : str
+        ID of the Google Sheet.
+    worksheet_name : str
+        Worksheet name.
+    df_to_append : pandas.DataFrame
+        DataFrame to append.
+    start_cell : str, default "A1"
+        A1 cell that defines the starting column (and minimum row).
+        Example: "C2" means append into column C, and never write above row 2.
+    include_header : bool, default False
+        Whether to write DataFrame column headers as the first row of the appended block.
+    scan_col : int, default 1
+        Column index (1-based) to determine "last filled row".
+        Pick a column that is always filled for real rows.
+    retries / initial_delay / backoff_factor
+        Same retry style as your update function.
+
+    Returns
+    -------
+    dict
+        Metadata about the write location.
+    """
+    if df_to_append is None or len(df_to_append) == 0:
+        print("Nothing to append: df_to_append is empty.")
+        return {"written": False, "start_row": None, "start_col": None}
+
+    min_row, start_col = _a1_to_rowcol(start_cell)
+
+    attempt = 0
+    delay = initial_delay
+    last_exception = None
+
+    while attempt < retries:
+        attempt += 1
+        try:
+            spreadsheet = gc.open_by_key(spreadsheet_id)
+            worksheet = spreadsheet.worksheet(worksheet_name)
+
+            last_filled = find_last_filled_row_in_sheet(
+                gc=gc,
+                spreadsheet_id=spreadsheet_id,
+                worksheet_name=worksheet_name,
+                scan_col=scan_col,
+                include_header=True,  # detect true emptiness
+            )
+
+            start_row = max(min_row, last_filled + 1)
+
+            set_with_dataframe(
+                worksheet,
+                df_to_append,
+                row=start_row,
+                col=start_col,
+                include_column_header=include_header,
+                resize=False,  # don't shrink/expand the sheet automatically
+            )
+
+            print(
+                f"[attempt {attempt}/{retries}] Appended df with shape={df_to_append.shape} "
+                f"to {spreadsheet_id!r} - {worksheet_name!r} at {start_row=}, {start_col=}."
+            )
+
+            return {
+                "written": True,
+                "start_row": start_row,
+                "start_col": start_col,
+                "last_filled_row_before": last_filled,
+                "include_header": include_header,
+            }
+
+        except Exception as e:
+            last_exception = e
+            print(
+                f"[attempt {attempt}/{retries}] Failed to append to sheet "
+                f"{spreadsheet_id!r} - {worksheet_name!r}: {e}"
+            )
+            if attempt >= retries:
+                print("Exhausted all retries; giving up.")
+                raise
+
+            print(f"Retrying in {delay} seconds...")
+            time.sleep(delay)
+            delay *= backoff_factor
