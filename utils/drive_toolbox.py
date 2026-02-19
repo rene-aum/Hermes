@@ -189,6 +189,36 @@ def list_permissions(creds,file_id):
     resdf = pd.DataFrame(permissions['permissions'])
     return resdf
 
+def remove_write_permissions_sheets(gc,sheet_id,email_user_list):
+  """remove permissions for a list of emails, downgrades writer to reader.
+     removes complete permissions then assigns reader permissions
+  """
+  # update permission
+  spreadsheet = gc.open_by_key(sheet_id)
+  # share with an email as writer
+  for u in email_user_list:
+    print(u)
+    spreadsheet.remove_permissions(u, role='writer')
+    print(spreadsheet.share(u, perm_type='user', role='reader', notify=False))
+
+  return
+
+def share_write_permissions_sheets(gc,sheet_id,email_user_list):
+  """
+  Docstring para share_write_permissions_sheets
+  
+  :param gc: Descripción
+  :param sheet_id: Descripción
+  :param email_user_list: Descripción
+  """
+  # update permission
+  spreadsheet = gc.open_by_key(sheet_id)
+  # share with an email as writer
+  for u in email_user_list:
+    print(u)
+    print(spreadsheet.share(u, perm_type='user', role='writer', notify=False))
+  return
+
 def _a1_to_rowcol(a1: str):
     """
     Minimal A1 parser for a cell like 'B2' -> (row=2, col=2).
