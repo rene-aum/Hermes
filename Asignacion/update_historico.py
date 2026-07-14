@@ -133,6 +133,13 @@ def _update_from_torre_v2(
     update_df_torre_v2_cerr["asesor espacio"] = update_df_torre_v2_cerr["asesor espacio tcv2"]
     update_df_torre_v2_cerr["asesor credito"] = update_df_torre_v2_cerr["asesor credito tcv2"]
     update_df_torre_v2_cerr["estatus de lead"] = update_df_torre_v2_cerr["estatus de lead tcv2"]
+
+    print(f"update_df_torre_v2_cerr shape: {update_df_torre_v2_cerr.shape[0]}")
+    print(update_df_torre_v2_cerr[["id lead", "estatus de lead", "estatus de lead tcv2", 
+                                   "espacio automarket","espacio automarket tcv2", 
+                                   "asesor espacio", "asesor espacio tcv2",
+                                   "asesor credito", "asesor credito tcv2",
+                                   "flag salio de cerrado"]])
     update_df_torre_v2_cerr = update_df_torre_v2_cerr.drop(
         columns=["estatus de lead tcv2", "asesor espacio tcv2", "espacio automarket tcv2", "asesor credito tcv2"]
     )
