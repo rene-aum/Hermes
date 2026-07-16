@@ -118,8 +118,6 @@ def _update_from_torre_v2(
         .drop(columns=["_merge"])
         [lambda x: (x["estatus de lead tcv2"].notna()) & (
             (x["estatus de lead"].str.strip() != x["estatus de lead tcv2"].str.strip())
-            | (x["espacio automarket"].str.strip() != x["espacio automarket tcv2"].str.strip())
-            | (x["asesor espacio"].str.strip() != x["asesor espacio tcv2"].str.strip())
         )]
         .assign(flag_torre_v2=1, fecha_de_proceso=now_str)
     )
@@ -129,9 +127,9 @@ def _update_from_torre_v2(
         & (update_df_torre_v2_cerr["estatus de lead tcv2"] != "CERRADO")
     )
     update_df_torre_v2_cerr.loc[mask_salio_cerrado, "flag salio de cerrado"] = 1
-    update_df_torre_v2_cerr["espacio automarket"] = update_df_torre_v2_cerr["espacio automarket tcv2"]
-    update_df_torre_v2_cerr["asesor espacio"] = update_df_torre_v2_cerr["asesor espacio tcv2"]
-    update_df_torre_v2_cerr["asesor credito"] = update_df_torre_v2_cerr["asesor credito tcv2"]
+    # update_df_torre_v2_cerr["espacio automarket"] = update_df_torre_v2_cerr["espacio automarket tcv2"]
+    # update_df_torre_v2_cerr["asesor espacio"] = update_df_torre_v2_cerr["asesor espacio tcv2"]
+    # update_df_torre_v2_cerr["asesor credito"] = update_df_torre_v2_cerr["asesor credito tcv2"]
     update_df_torre_v2_cerr["estatus de lead"] = update_df_torre_v2_cerr["estatus de lead tcv2"]
 
     
