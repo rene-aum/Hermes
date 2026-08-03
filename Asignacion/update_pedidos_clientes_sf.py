@@ -30,7 +30,7 @@ def actualizar_reporte_clientes(
     ah: Any,
     drive: Any,
     write_csv_to_drive: Any,
-    drive_folder_id: str = DEFAULT_CLIENTES_DRIVE_FOLDER_ID,
+    drive_folder_id: str = DEFAULT_CLIENTES_DRIVE_CSV_ID,
     nombre_archivo: str = "prueba_clientes.csv",
 ) -> pd.DataFrame:
     """Extrae, transforma y guarda el reporte de clientes.
