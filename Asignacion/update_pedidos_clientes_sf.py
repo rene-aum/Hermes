@@ -99,7 +99,8 @@ def actualizar_reporte_clientes(
     write_csv_to_drive(
         drive,
         DEFAULT_CLIENTES_DRIVE_CSV_ID,
-        cltescm
+        cltescm,
+        encoding="utf-8-sig"
     )
 
     return cltescm
