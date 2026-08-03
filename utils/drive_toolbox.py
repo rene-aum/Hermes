@@ -155,14 +155,16 @@ def write_csv_to_drive(drive,file_id, df):
     # Convert to CSV
     csv_buffer = io.StringIO()
     df.to_csv(csv_buffer, index=False)
-    csv_buffer.seek(0)
+    
+    csv_content = csv_buffer.getvalue()
 
-    # Load existing Drive file by ID
+    # Añadir BOM para que Excel detecte correctamente UTF-8
+    if encoding and encoding.lower().replace("_", "-") == "utf-8-sig":
+        csv_content = "\ufeff" + csv_content
+
     file = drive.CreateFile({"id": file_id})
-    file.SetContentString(csv_buffer.getvalue())
-    file.Upload()    # <-- overwrites content, keeps same file ID
-
-    print("Updated successfully.")
+    file.SetContentString(csv_content)
+    file.Upload()
 
 def create_csv_file_in_drive_folder(drive,folder_id,df,filename):
     """filename: string with extension .csv
