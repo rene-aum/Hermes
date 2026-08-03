@@ -148,7 +148,7 @@ def read_csv_from_drive(drive,file_id,**read_csv_kwargs):
     df = pd.read_csv(io.StringIO(csv_bytes),**read_csv_kwargs)
     return df
 
-def write_csv_to_drive(drive,file_id, df):
+def write_csv_to_drive(drive,file_id, df, encoding=None):
     """Ya debe existir el archivo csv en drive y por tanto el file_id
         df: pandas dataframe
     """
