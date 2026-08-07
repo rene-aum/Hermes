@@ -22,8 +22,8 @@ import pandas as pd
 BUCKET_NAME = "aws-s3-reporte-atenea-usorg-nprd"
 SILVER_PATH = "data/Silver"
 
-DEFAULT_CLIENTES_DRIVE_CSV_ID = "1yGZ2u7F74a-sIScI3puoF_Vy9t9Vl90w"
-DEFAULT_PEDIDOS_DRIVE_FOLDER_ID = "1fttKxZMGSrgW8HJBcRyfczgOPcRu6twi"
+DEFAULT_CLIENTES_DRIVE_CSV_ID = "1KZI-aoRnuekgnALfVobiAOTWPzrzp3ZK"
+DEFAULT_PEDIDOS_DRIVE_FOLDER_ID = "1a16PLaX1PZ36hVibZWTx5v6h0nVSc1cT"
 
 
 def actualizar_reporte_clientes(
